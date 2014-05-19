@@ -12,10 +12,11 @@
 3. Navigate to your WooCommerce settings page, click on **Payment Gateways** and click the **Twocheckout** link.
 4. Check to enable.
 5. Enter the payment title and descriptino.
-6. Enter your Seller ID (2Checkout Account Number).
-7. Enter your 2Checkout API publishable key.
-8. Enter your 2Checkout API private key.
-9. Click 'Save Changes'.
+6. Enable for shipping methods (Leave blank, for always display)
+7. Enter your Seller ID (2Checkout Account Number).
+8. Enter your 2Checkout API publishable key.
+9. Enter your 2Checkout API private key.
+10. Click 'Save Changes'.
 
 
 
@@ -28,10 +29,11 @@
 3. Navigate to your WooCommerce settings page, click on **Payment Gateways** and click the **Twocheckoutpp** link.
 4. Check to enable.
 5. Enter the payment title and description.
-6. Enter your Seller ID (2Checkout Account Number).
-7. Enter your **Secret Word** _(Must be the same value entered on your 2Checkout Site Management page.)_
+6. Enable for shipping methods (Leave blank, for always display)
+7. Enter your Seller ID (2Checkout Account Number).
+8. Enter your **Secret Word** _(Must be the same value entered on your 2Checkout Site Management page.)_
 9. Click **Save Changes**.
-8. Save your changes.
+10. Save your changes.
 
 
 #### 2Checkout Settings
