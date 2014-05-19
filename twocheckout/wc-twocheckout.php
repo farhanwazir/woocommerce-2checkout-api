@@ -41,6 +41,7 @@ function woocommerce_twocheckout(){
             $this->publishable_key = $this->get_option('publishable_key');
             $this->private_key = $this->get_option('private_key');
             $this->description = $this->get_option('description');
+            $this->enable_for_methods = $this->get_option( 'enable_for_methods', array() );
             $this->sandbox = $this->get_option('sandbox');
 
             // Logs
@@ -73,7 +74,7 @@ function woocommerce_twocheckout(){
 
             return true;
         }
-
+	
         /**
          * Admin Panel Options
          * - Options for bits like 'title' and availability on a country-by-country basis
@@ -100,7 +101,8 @@ function woocommerce_twocheckout(){
             <?php
             endif;
         }
-
+	
+	
 
         /**
          * Initialise Gateway Settings Form Fields
@@ -109,7 +111,14 @@ function woocommerce_twocheckout(){
          * @return void
          */
         function init_form_fields() {
+		
+	    $shipping_methods = array();
 
+    	    if ( is_admin() )
+	    		foreach ( WC()->shipping->load_shipping_methods() as $method ) {
+		    		$shipping_methods[ $method->id ] = $method->get_title();
+	    		}
+	    	
             $this->form_fields = array(
                 'enabled' => array(
                     'title' => __( 'Enable/Disable', 'woocommerce' ),
@@ -130,6 +139,19 @@ function woocommerce_twocheckout(){
                     'description' => __( 'This controls the description which the user sees during checkout.', 'woocommerce' ),
                     'default' => __( 'Pay with Credit Card/PayPal', 'woocommerce' )
                 ),
+                'enable_for_methods' => array(
+			'title'             => __( 'Enable for shipping methods', 'woocommerce' ),
+			'type'              => 'multiselect',
+			'class'             => 'chosen_select',
+			'css'               => 'width: 450px;',
+			'default'           => '',
+			'description'       => __( 'If 2CO is only available for certain methods, set it up here. Leave blank to enable for all methods.', 'woocommerce' ),
+			'options'           => $shipping_methods,
+			'desc_tip'          => true,
+			'custom_attributes' => array(
+						'data-placeholder' => __( 'Select shipping methods', 'woocommerce' )
+					)
+		),
                 'seller_id' => array(
                     'title' => __( 'Seller ID', 'woocommerce' ),
                     'type' 			=> 'text',
@@ -163,7 +185,91 @@ function woocommerce_twocheckout(){
             );
 
         }
+	
+	/**
+	 * Check If The Gateway Is Available For Use
+	 *
+	 * @return bool
+	 */
+	public function is_available() {
+		$order = null;
 
+		if ( ! $this->enable_for_virtual ) {
+			if ( WC()->cart && ! WC()->cart->needs_shipping() ) {
+				return false;
+			}
+
+			if ( is_page( wc_get_page_id( 'checkout' ) ) && 0 < get_query_var( 'order-pay' ) ) {
+				$order_id = absint( get_query_var( 'order-pay' ) );
+				$order    = new WC_Order( $order_id );
+
+				// Test if order needs shipping.
+				$needs_shipping = false;
+
+				if ( 0 < sizeof( $order->get_items() ) ) {
+					foreach ( $order->get_items() as $item ) {
+						$_product = $order->get_product_from_item( $item );
+
+						if ( $_product->needs_shipping() ) {
+							$needs_shipping = true;
+							break;
+						}
+					}
+				}
+
+				$needs_shipping = apply_filters( 'woocommerce_cart_needs_shipping', $needs_shipping );
+
+				if ( $needs_shipping ) {
+					return false;
+				}
+			}
+		}
+
+		if ( ! empty( $this->enable_for_methods ) ) {
+
+			// Only apply if all packages are being shipped via local pickup
+			$chosen_shipping_methods_session = WC()->session->get( 'chosen_shipping_methods' );
+
+			if ( isset( $chosen_shipping_methods_session ) ) {
+				$chosen_shipping_methods = array_unique( $chosen_shipping_methods_session );
+			} else {
+				$chosen_shipping_methods = array();
+			}
+
+			$check_method = false;
+
+			if ( is_object( $order ) ) {
+				if ( $order->shipping_method ) {
+					$check_method = $order->shipping_method;
+				}
+
+			} elseif ( empty( $chosen_shipping_methods ) || sizeof( $chosen_shipping_methods ) > 1 ) {
+				$check_method = false;
+			} elseif ( sizeof( $chosen_shipping_methods ) == 1 ) {
+				$check_method = $chosen_shipping_methods[0];
+			}
+
+			if ( ! $check_method ) {
+				return false;
+			}
+
+			$found = false;
+
+			foreach ( $this->enable_for_methods as $method_id ) {
+				if ( strpos( $check_method, $method_id ) === 0 ) {
+					$found = true;
+					break;
+				}
+			}
+
+			if ( ! $found ) {
+				return false;
+			}
+		}
+
+		return parent::is_available();
+	}
+	
         /**
          * Generate the credit card payment form
          *
